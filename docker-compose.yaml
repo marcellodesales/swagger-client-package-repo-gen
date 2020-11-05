@@ -1,0 +1,20 @@
+version: "3.6"
+
+services:
+
+  # Must be executed with a flag "--env-file" to the environment to run
+  swagger-client-generator:
+    # https://github.com/intuit/unmazedboot/releases/tag/v0.5.0
+    image: supercash/tools/swagger-client-generator
+    build:
+      context: .
+    volumes:
+       # The schemas dir with the files where SCHEMA_FILE_NAME is found
+       - ".:/schemas"
+
+       # Where the generated client stubs are located
+       - "./client-api:/client-api"
+
+       # When providing GENERATE_CLIENT_PUBLISH_TOKEN, both the library and source are pushed
+       # Needs the SSH keys to push the code automagically
+       - ${HOME}/.ssh:/root/.ssh
