@@ -3,6 +3,7 @@
 * Generates the Swagger API client files
   * Provided by Swagger Codegen project
   * Includes documentation in some cases
+  * https://github.com/swagger-api/swagger-codegen/blob/master/modules/swagger-codegen-maven-plugin/README.md
 * Commits code and Publishes the Git repo to a Git repository
 * Publishes the packaging to a Package repository
   * [x] Java -> Maven
