@@ -3,9 +3,9 @@ version: "3.6"
 services:
 
   # Must be executed with a flag "--env-file" to the environment to run
-  swagger-client-generator:
+  swagger-client-repo-gen:
     # https://github.com/intuit/unmazedboot/releases/tag/v0.5.0
-    image: supercash/tools/swagger-client-generator
+    image: marcellodesales/swagger-client-package-repo-gen
     build:
       context: .
     environment:
