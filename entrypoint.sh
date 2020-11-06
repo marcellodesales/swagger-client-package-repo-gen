@@ -102,7 +102,6 @@ fi
 # Finally, copy the generated artifacts to the client
 echo ""
 export CLIENT_DIR="$GENERATE_CLIENT_ARTIFACT-${GENERATE_CLIENT_WITH_LIBRARY}"
-echo "🍻 Local deploy to /client-api/${CLIENT_DIR}"
 if [ -d "/client-api/${CLIENT_DIR}" ]; then
   echo ""
   echo "💥 Deleting previous build from directory '/client-api/${CLIENT_DIR}'"
@@ -111,4 +110,9 @@ if [ -d "/client-api/${CLIENT_DIR}" ]; then
 fi
 cd ..
 mv springboot-client-api/ ${CLIENT_DIR}
+
+echo "🍻 Local deploy to /client-api/${CLIENT_DIR}"
 cp -R -v ${CLIENT_DIR}/ /client-api
+
+echo ""
+echo "✨ Done!"
