@@ -18,12 +18,31 @@
 
 * It's faster to get started and test client implementations
 * It's a well-defined process and anyone can quickly iterate over it
+* All the client APIs are published to both the git repo and the component repo
 
 # How
 
 * Create an `input.env` file with parameters
   * Use the `template-docker-compose.env`
 * Invoke `docker-compose` with it and profit
+
+# Running
+
+> **ATTENTION**: Make sure to copy the template `template-docker-compose.env` and set your own variables.
+
+* Use docker-compose to run a container with the generation
+
+```console
+$ docker-compose --env-file parking-plus.env up --build
+```
+
+* Before running again, remove the previous container
+
+```console
+$ docker-compose --env-file parking-plus.env rm --force
+Going to remove swagger-client-pacakge-repo-gen_swagger-client-repo-gen_1
+Removing swagger-client-pacakge-repo-gen_swagger-client-repo-gen_1 ... done
+```
 
 # Examples
 
@@ -1327,4 +1346,3 @@ swagger-client-repo-gen_1  |
 swagger-client-repo-gen_1  | ✨ Done!
 swagger-client-pacakge-repo-gen_swagger-client-repo-gen_1 exited with code 0
 ```
-
