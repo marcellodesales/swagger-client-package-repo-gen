@@ -47,11 +47,6 @@ for element in pomRoot:
         scmElement.text = scmElement.text.replace(".git", "-{}.git".format(os.environ["GENERATE_CLIENT_WITH_LIBRARY"]))
         print "Set {} = {}".format(scmElement.tag, scmElement.text)
 
-        cloneUrl = "git@{}:{}-{}.git".format(os.environ["GENERATE_CLIENT_GIT_HOST"], os.environ["GENERATE_CLIENT_GIT_USER_REPO"], os.environ["GENERATE_CLIENT_WITH_LIBRARY"])
-        cloneFile = open("git-remote.txt","w")
-        cloneFile.writelines(cloneUrl)
-        cloneFile.close()
-
       if "url" in scmElement.tag:
         scmElement.text = os.environ["GENERATE_CLIENT_URL"]
         scmElement.text = "{}-{}".format(scmElement.text, os.environ["GENERATE_CLIENT_WITH_LIBRARY"])
