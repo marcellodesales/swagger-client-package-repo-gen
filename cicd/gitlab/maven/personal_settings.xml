@@ -1,3 +1,4 @@
+<!-- https://docs.gitlab.com/ee/user/packages/maven_repository/index.html#authenticate-with-a-personal-access-token-in-maven -->
 <settings>
   <servers>
     <server>
