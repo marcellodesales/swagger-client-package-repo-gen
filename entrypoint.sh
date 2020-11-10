@@ -103,7 +103,10 @@ echo ""
 echo "🎨 Copying originating schema '/schemas/${SCHEMA_FILE_NAME}'"
 echo ""
 mkdir -p src/main/resources
-cp -v "/schemas/${SCHEMA_FILE_NAME}" src/main/resources
+
+# Copy the file to the resources named "swagger-api.[ext]"
+export SCHEMA_EXT="${SCHEMA_FILE_NAME##*.}"
+cp -v "/schemas/${SCHEMA_FILE_NAME}" src/main/resources/swagger-api.${SCHEMA_EXT}
 
 if [ -z ${GENERATE_CLIENT_GIT_BRANCH} ]; then
   echo "- Initial commit..."
