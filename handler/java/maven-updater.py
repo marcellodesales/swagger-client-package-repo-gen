@@ -3,7 +3,8 @@ from xml.etree import ElementTree as et
 import os
 import shutil
 
-pomFile = "springboot-client-api/pom.xml"
+# pom file location
+pomFile = "{}/pom.xml".format(os.environ["CLIENT_API_LOCATION"])
 try:
   file = open(pomFile, 'r')
 except IOError:

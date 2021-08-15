@@ -76,7 +76,7 @@
                                 <dateLibrary>joda</dateLibrary>
                             </configOptions>
 
-                            <output>${project.basedir}/springboot-client-api</output>
+                            <output>${project.basedir}/client-api</output>
 
                             <!-- override the default library to resttemplate -->
                             <library>${env.GENERATE_CLIENT_WITH_LIBRARY}</library>

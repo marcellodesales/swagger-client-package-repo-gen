@@ -10,10 +10,10 @@ COPY pom.xml .
 RUN mvn dependency:resolve-plugins dependency:go-offline
 
 COPY entrypoint.sh .
-COPY update-generated-project.py .
+COPY handler .
 COPY cicd/ cicd/
 
 VOLUME /schemas
 VOLUME /client-api
 
-CMD ["/generator/entrypoint.sh"]
+CMD ["/bin/bash", "/generator/entrypoint.sh"]
