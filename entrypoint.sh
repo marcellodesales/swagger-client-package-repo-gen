@@ -11,6 +11,7 @@ fi
 
 : ${GENERATE_CLIENT_LANG?"Must GENERATE_CLIENT_LANG"}
 : ${GENERATE_CLIENT_WITH_LIBRARY?"Must set GENERATE_CLIENT_WITH_LIBRARY"}
+: ${GENERATE_CLIENT_WITH_BUILDER?"Must set GENERATE_CLIENT_WITH_BUILDER (maven, gradle in java lang)"}
 
 : ${GENERATE_CLIENT_GROUPID?"Must set GENERATE_CLIENT_GROUPID"}
 : ${GENERATE_CLIENT_ARTIFACT?"Must set GENERATE_CLIENT_ARTIFACT"}
@@ -24,26 +25,25 @@ fi
 : ${GENERATE_CLIENT_URL?"Must set GENERATE_CLIENT_URL"}
 : ${GENERATE_CLIENT_GIT_HOST?"Must set GENERATE_CLIENT_GIT_HOST"}
 
-# https://stackoverflow.com/questions/2829613/how-do-you-tell-if-a-string-contains-another-string-in-posix-sh/8811800#8811800
-if test "${GENERATE_CLIENT_GIT_HOST#*gitlab}" != "gitlab"; then
-  : ${GENERATE_CLIENT_GITLAB_PROJECT_ID?"Must set GENERATE_CLIENT_GITLAB_PROJECT_ID for gitlab hosts. It's in the root of the repo project!"}
-fi
-
-: ${GENERATE_CLIENT_GIT_USER_REPO?"Must set GENERATE_CLIENT_GIT_USER_REPO"}
+: ${GENERATE_CLIENT_GIT_USER?"Must set GENERATE_CLIENT_GIT_USER"}
+: ${GENERATE_CLIENT_GIT_REPO?"Must set GENERATE_CLIENT_GIT_REPO"}
 
 # For Developer Info and Initial Commit
 : ${GENERATE_CLIENT_AUTHOR_FULLNAME?"Must set GENERATE_CLIENT_AUTHOR_FULLNAME"}
 : ${GENERATE_CLIENT_AUTHOR_EMAIL?"Must set GENERATE_CLIENT_AUTHOR_EMAIL"}
 
 # Normalize clients that doesn't have library
-if [ -z "${GENERATE_CLIENT_WITH_LIBRARY}" ]; then
-  export GENERATE_CLIENT_TYPE=${GENERATE_CLIENT_LANG}
-else
-  export GENERATE_CLIENT_TYPE=${GENERATE_CLIENT_WITH_LIBRARY}
-fi
+#if [ -z "${GENERATE_CLIENT_WITH_LIBRARY}" ]; then
+#  export GENERATE_CLIENT_TYPE=${GENERATE_CLIENT_LANG}
+#else
+#  export GENERATE_CLIENT_TYPE=${GENERATE_CLIENT_WITH_LIBRARY}
+#fi
+#export GENERATE_CLIENT_GIT_REPO="${GENERATE_CLIENT_GIT_REPO}-${GENERATE_CLIENT_TYPE}"
+
+export GENERATE_CLIENT_GIT_USER_REPO="${GENERATE_CLIENT_GIT_USER}/${GENERATE_CLIENT_GIT_REPO}"
 
 # Where to send the files to
-export GIT_REMOTE="git@${GENERATE_CLIENT_GIT_HOST}:${GENERATE_CLIENT_GIT_USER_REPO}-${GENERATE_CLIENT_TYPE}.git"
+export GIT_REMOTE="git@${GENERATE_CLIENT_GIT_HOST}:${GENERATE_CLIENT_GIT_USER}/${GENERATE_CLIENT_GIT_REPO}.git"
 
 echo ""
 echo "🐙 Setting up initial git repo at '${GIT_REMOTE}'"
@@ -126,19 +126,26 @@ else
 fi
 echo ""
 
-# Generates the files under the dir springboot-client-api/
+# Generates the files under the dir client-api/
 mvn generate-sources --offline
 
-if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
-  if [ -z ${GENERATE_CLIENT_GIT_BRANCH} ]; then
-    echo ""
-    echo "🏗  Updating client metadata and files for CI/CD for ${GENERATE_CLIENT_LANG}"
-    python handler/java/maven-updater.py
 
-  else
-    echo ""
-    echo "🏗  Updating client metadata already setup and in the repo!"
-  fi
+echo ""
+echo "👷 Selected builder is '${GENERATE_CLIENT_WITH_BUILDER}'"
+if [ "${GENERATE_CLIENT_WITH_BUILDER}" == "maven" ]; then
+  echo "🔥 Deleting other builder artifacts such as travis, gradle, sbt that will not be used..."
+  # https://stackoverflow.com/questions/24058921/how-to-recursively-delete-multiple-files-with-different-extensions/24059207#24059207
+  # https://unix.stackexchange.com/questions/249501/shell-find-delete-directory-not-empty/249503#249503
+  find ${CLIENT_API_LOCATION} \( -name "*travis*" -o -name "*gradle*" -o -name "*git_push*" -o -name "*sbt*" \) -exec rm -rv {} +
+fi
+
+
+# Only generate if the repo was created to avoid errors
+if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
+  echo ""
+  echo "🏗  Updating client metadata and files for CI/CD for ${GENERATE_CLIENT_LANG}"
+
+  python handler/java/maven-updater.py
 fi
 
 echo ""
@@ -146,6 +153,7 @@ echo "🏺 Packaging clients from stubs"
 echo ""
 if [ "$GENERATE_CLIENT_LANG" == "java" ]; then
   cd ${CLIENT_API_LOCATION}
+
   mvn package -Dmaven.test.skip=true
 
   # Fix the Android thing that's added
@@ -217,6 +225,17 @@ EOF
 fi
 
 echo ""
+if [ "${CREATE_NEW_GIT_REPO}" == "true" ] || [ ! -z "${GENERATE_CLIENT_GIT_PUSH}" ]; then
+  # let's just push as we pushed the modules
+  echo "🚚 Pushing the code to the git host. Make sure to have the ssh keys mounted!"
+  git -C ${CLIENT_API_LOCATION} push origin ${GENERATE_CLIENT_GIT_BRANCH}
+
+else
+  echo "🚚 Skip pushing to the code to git. Set GENERATE_CLIENT_GIT_PUSH=true if needed!"
+fi
+echo ""
+
+echo ""
 if [ ! -z "${GENERATE_CLIENT_PUBLISH_TOKEN}" ]; then
   export GITLAB_TOKEN=${GENERATE_CLIENT_PUBLISH_TOKEN}
   echo "📦 Publishing stubs to Gitlab Maven Repository"
@@ -228,16 +247,6 @@ if [ ! -z "${GENERATE_CLIENT_PUBLISH_TOKEN}" ]; then
 
 else
   echo "📦 Skip publishing stubs to Maven repo. Set GENERATE_CLIENT_PUBLISH_TOKEN=token if needed!"
-fi
-echo ""
-
-if [ ! -z "${GENERATE_CLIENT_GIT_PUSH}" ]; then
-  # let's just push as we pushed the modules
-  echo "🚚 Pushing the code to the git host. Make sure to have the ssh keys mounted!"
-  git -C ${CLIENT_API_LOCATION} push origin ${GENERATE_CLIENT_GIT_BRANCH}
-
-else
-  echo "🚚 Skip pushing to the code to git. Set GENERATE_CLIENT_GIT_PUSH=true if needed!"
 fi
 echo ""
 
