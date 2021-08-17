@@ -1,0 +1,111 @@
+# https://www.freecodecamp.org/news/a-lightweight-tool-agnostic-ci-cd-flow-with-github-actions/
+# TODO: Reuse it when https://github.com/github/roadmap/issues/98 is done
+name: main
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - feature/**
+      - bugfix/**
+      - hotfix/**
+    paths-ignore:
+      - '**/README.md' # https://stackoverflow.com/questions/62968897/is-it-possible-to-not-run-github-action-for-readme-updates/62972393#62972393
+
+jobs:
+  build:
+    name:  Build CLI Binaries
+
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_IMAGE_TAG: "docker.pkg.github.com/${GITHUB_REPOSITORY}/${GITHUB_REF##*/}"
+      # https://github.com/actions/starter-workflows/issues/68#issuecomment-524665878
+
+    steps:
+      - name: Repo Name
+        run: |
+           echo "GIHUB_IMAGE_REPO_NAME=$( echo ${GITHUB_REPOSITORY} | awk -F'/' '{ print $2 }' )" >> $GITHUB_ENV
+      - name: Public Docker Repo Name
+        run: |
+           echo "PUBLIC_DOCKER_REPO=$( echo ${GITHUB_REPOSITORY} | sed 's/-docker//g' | sed 's/docker-//g' )" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+        with:
+          # https://github.com/actions/checkout/pull/258 needs to fetch all tags so that Makefile can make the correct version
+          fetch-depth: 0
+
+      - name: Build docker image
+        # https://stackoverflow.com/questions/55756372/when-using-buildkit-with-docker-how-do-i-see-the-output-of-run-commands/55759337#55759337
+        run: DOCKER_BUILDKIT=1 docker build --progress=plain -t docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} .
+
+      - name: Tag with the branch name
+        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_REF##*/}
+
+      - name: Tag the latest image
+        if: endsWith(github.ref, '/main')
+        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:latest
+
+      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
+
+      # Publish the Branch Docker Images to Github Container Registry
+      - name: Push latest Docker Image
+        run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA}
+
+      # Publish the Sha  Docker Images to Github Container Registry
+      - name: Push Docker Image
+        run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_REF##*/}
+
+       # Publish the Sha  Docker Images to Github Container Registry
+      - name: Push Docker Image latest from master
+        if: endsWith(github.ref, '/main')
+        run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:latest
+
+      - name: Docker image to push
+        run: echo "Image repo is '${{env.PUBLIC_DOCKER_REPO}}'"
+
+      ################################################
+      ##########
+      ########## https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      ########## https://github.com/marcellodesales/gitops-committer-docker/tree/master/.github/workflows
+      ##########  
+      ########## 1. Go to the repo Settings -> Secrets -> Action Secrets
+      ########## 2. Add REGISTRY_GITHUB_TOKEN, REGISTRY_DOCKERHUB_TOKEN
+      ########## 3. Rebuild
+      ##########
+      - name: Login to Dockerhub Registry
+        uses: docker/login-action@v1
+        with:
+          #registry: docker.com
+          username: ${{ secrets.REGISTRY_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.REGISTRY_DOCKERHUB_TOKEN }}
+
+      - name: Tag the latest image in the public repo
+        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_SHA}
+
+      - name: Tag the latest image in the public repo
+        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_REF##*/}
+
+       # Latest version of image
+      - name: Docker Push the latest image
+        if: endsWith(github.ref, '/main') || endsWith(github.ref, '/master')
+        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}
+
+      - name: Tag the latest image in the public repo
+        run: docker push ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_SHA}
+
+      - name: Tag the latest image in the public repo
+        run: docker push ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_REF##*/}
+
+       # Latest version of image
+      - name: Docker Push the latest image
+        if: endsWith(github.ref, '/main') || endsWith(github.ref, '/master')
+        run: docker push ${{env.PUBLIC_DOCKER_REPO}}
+
