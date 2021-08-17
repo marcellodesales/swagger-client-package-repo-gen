@@ -71,12 +71,20 @@ jobs:
       - name: Docker image to push
         run: echo "Image repo is '${{env.PUBLIC_DOCKER_REPO}}'"
 
-      # https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      ################################################
+      ##########
+      ########## https://github.com/marcellodesales/cloner/packages?package_type=Docker
+      ########## https://github.com/marcellodesales/gitops-committer-docker/tree/master/.github/workflows
+      ##########  
+      ########## 1. Go to the repo Settings -> Secrets -> Action Secrets
+      ########## 2. Add REGISTRY_GITHUB_TOKEN, REGISTRY_DOCKERHUB_TOKEN
+      ########## 3. Rebuild
+      ##########
       - name: Login to Dockerhub Registry
         uses: docker/login-action@v1
         with:
           #registry: docker.com
-          username: marcellodesales
+          username: ${{ secrets.REGISTRY_DOCKERHUB_USERNAME }}
           password: ${{ secrets.REGISTRY_DOCKERHUB_TOKEN }}
 
       - name: Tag the latest image in the public repo
