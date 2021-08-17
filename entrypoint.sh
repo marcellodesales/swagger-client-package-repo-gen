@@ -32,14 +32,6 @@ fi
 : ${GENERATE_CLIENT_AUTHOR_FULLNAME?"Must set GENERATE_CLIENT_AUTHOR_FULLNAME"}
 : ${GENERATE_CLIENT_AUTHOR_EMAIL?"Must set GENERATE_CLIENT_AUTHOR_EMAIL"}
 
-# Normalize clients that doesn't have library
-#if [ -z "${GENERATE_CLIENT_WITH_LIBRARY}" ]; then
-#  export GENERATE_CLIENT_TYPE=${GENERATE_CLIENT_LANG}
-#else
-#  export GENERATE_CLIENT_TYPE=${GENERATE_CLIENT_WITH_LIBRARY}
-#fi
-#export GENERATE_CLIENT_GIT_REPO="${GENERATE_CLIENT_GIT_REPO}-${GENERATE_CLIENT_TYPE}"
-
 export GENERATE_CLIENT_GIT_USER_REPO="${GENERATE_CLIENT_GIT_USER}/${GENERATE_CLIENT_GIT_REPO}"
 
 # Where to send the files to
@@ -232,10 +224,13 @@ EOF
 fi
 
 echo ""
-if [ "${CREATE_NEW_GIT_REPO}" == "true" ] || [ ! -z "${GENERATE_CLIENT_GIT_PUSH}" ]; then
+if [ "${CREATE_NEW_GIT_REPO}" == "true" ] || [ "${GENERATE_CLIENT_GIT_PUSH}" == "true" ]; then
   # let's just push as we pushed the modules
   echo "🚚 Pushing the code to the git host. Make sure to have the ssh keys mounted!"
   git -C ${CLIENT_API_LOCATION} push origin ${GENERATE_CLIENT_GIT_BRANCH}
+
+  # Since it was pushed, we expect the library to also push a new version
+  export GENERATE_CLIENT_GIT_PUSH="true"
 
 else
   echo "🚚 Skip pushing to the code to git. Set GENERATE_CLIENT_GIT_PUSH=true if needed!"
@@ -243,7 +238,7 @@ fi
 echo ""
 
 echo ""
-if [ ! -z "${GENERATE_CLIENT_PUBLISH_TOKEN}" ]; then
+if [ ! -z "${GENERATE_CLIENT_PUBLISH_TOKEN}" ] && [ "${GENERATE_CLIENT_GIT_PUSH}" == "true" ]; then
   export GITLAB_TOKEN=${GENERATE_CLIENT_PUBLISH_TOKEN}
   echo "📦 Publishing stubs to Gitlab Maven Repository"
   echo ""
