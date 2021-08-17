@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DOCKER_IMAGE_TAG: "docker.pkg.github.com/${GITHUB_REPOSITORY}/${GITHUB_REF##*/}"
+      DOCKER_IMAGE_TAG: "ghcr.io/${GITHUB_REPOSITORY}/${GITHUB_REF##*/}"
       # https://github.com/actions/starter-workflows/issues/68#issuecomment-524665878
 
     steps:
@@ -38,35 +38,35 @@ jobs:
 
       - name: Build docker image
         # https://stackoverflow.com/questions/55756372/when-using-buildkit-with-docker-how-do-i-see-the-output-of-run-commands/55759337#55759337
-        run: DOCKER_BUILDKIT=1 docker build --progress=plain -t docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} .
+        run: DOCKER_BUILDKIT=1 docker build --progress=plain -t ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} .
 
       - name: Tag with the branch name
-        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_REF##*/}
+        run: docker tag ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_REF##*/}
 
       - name: Tag the latest image
         if: endsWith(github.ref, '/main')
-        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:latest
+        run: docker tag ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:latest
 
       # https://github.com/marcellodesales/cloner/packages?package_type=Docker
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@v1
         with:
-          registry: docker.pkg.github.com
+          registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
 
       # Publish the Branch Docker Images to Github Container Registry
       - name: Push latest Docker Image
-        run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA}
+        run: docker push ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA}
 
       # Publish the Sha  Docker Images to Github Container Registry
       - name: Push Docker Image
-        run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_REF##*/}
+        run: docker push ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_REF##*/}
 
        # Publish the Sha  Docker Images to Github Container Registry
       - name: Push Docker Image latest from master
         if: endsWith(github.ref, '/main')
-        run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:latest
+        run: docker push ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:latest
 
       - name: Docker image to push
         run: echo "Image repo is '${{env.PUBLIC_DOCKER_REPO}}'"
@@ -88,15 +88,15 @@ jobs:
           password: ${{ secrets.REGISTRY_DOCKERHUB_TOKEN }}
 
       - name: Tag the latest image in the public repo
-        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_SHA}
+        run: docker tag ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_SHA}
 
       - name: Tag the latest image in the public repo
-        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_REF##*/}
+        run: docker tag ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_REF##*/}
 
        # Latest version of image
       - name: Docker Push the latest image
         if: endsWith(github.ref, '/main') || endsWith(github.ref, '/master')
-        run: docker tag docker.pkg.github.com/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}
+        run: docker tag ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ${{env.PUBLIC_DOCKER_REPO}}
 
       - name: Tag the latest image in the public repo
         run: docker push ${{env.PUBLIC_DOCKER_REPO}}:${GITHUB_SHA}
