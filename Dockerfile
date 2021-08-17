@@ -1,7 +1,7 @@
 FROM maven:3.6.3-jdk-8-slim
 
 # Depedencies
-RUN apt-get update && apt-get install -y python git
+RUN apt-get update && apt-get install -y python git curl jq
 
 WORKDIR /generator
 
@@ -10,10 +10,10 @@ COPY pom.xml .
 RUN mvn dependency:resolve-plugins dependency:go-offline
 
 COPY entrypoint.sh .
-COPY update-generated-project.py .
+COPY handler handler/
 COPY cicd/ cicd/
 
 VOLUME /schemas
 VOLUME /client-api
 
-CMD ["/generator/entrypoint.sh"]
+CMD ["/bin/bash", "/generator/entrypoint.sh"]

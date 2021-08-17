@@ -3,15 +3,17 @@ from xml.etree import ElementTree as et
 import os
 import shutil
 
-pomFile = "springboot-client-api/pom.xml"
+# pom file location
+pomFileName = "{}/pom.xml".format(os.environ["CLIENT_API_LOCATION"])
+pomFile = None
 try:
-  file = open(pomFile, 'r')
+  pomFile = open(pomFileName, 'r')
 except IOError:
-  print "The file {} couldn't be found! Please check the build!".format(pomFile)
+  print "The file {} couldn't be found! Please check the build!".format(pomFileName)
   sys.exit(2)
 
 # https://stackabuse.com/reading-and-writing-xml-files-in-python/
-tree = et.parse(pomFile)
+tree = et.parse(pomFileName)
 pomRoot = tree.getroot()
 et.register_namespace("", "http://maven.apache.org/POM/4.0.0")
 
@@ -21,13 +23,13 @@ for element in pomRoot:
     print "Set {} = {}".format(element.tag, element.text)
 
   if "artifactId" in element.tag or "name" in element.tag:
-    element.text = "{}-{}".format(os.environ["GENERATE_CLIENT_ARTIFACT"], os.environ["GENERATE_CLIENT_WITH_LIBRARY"])
+    element.text = os.environ["GENERATE_CLIENT_ARTIFACT"]
     print "Set {} = {}".format(element.tag, element.text)
 
   if "version" in element.tag:
     element.text = os.environ["GENERATE_CLIENT_VERSION"]
-    if "SNAPSHOT" not in element.text:
-      element.text = "{}-SNAPSHOT".format(element.text)
+    if "RELEASE" in element.text and "master" != os.environ["GENERATE_CLIENT_GIT_BRANCH"]:
+      element.text = element.text.replace("RELEASE", "SNAPSHOT")
     print "Set {} = {}".format(element.tag, element.text)
 
   if "url" in element.tag:
@@ -74,50 +76,65 @@ for element in pomRoot:
             developerElement.text = "https://{}/{}".format(os.environ["GENERATE_CLIENT_GIT_HOST"], org)
             print "Set {} = {}".format(developerElement.tag, developerElement.text)
 
+clientDir = "client-api/"
 if "gitlab" in os.environ["GENERATE_CLIENT_GIT_HOST"]:
   print ""
   print "🚧 Generating CI/CD artifacts for Gitlab Project {}".format(os.environ["GENERATE_CLIENT_GITLAB_PROJECT_ID"])
 
   print "- Adding ci_settings.xml"
-  shutil.copy2("/generator/cicd/gitlab/maven/ci_settings.xml", "springboot-client-api/")
+  shutil.copy2("/generator/cicd/gitlab/maven/ci_settings.xml", clientDir)
 
   print "- Adding personal_settings.xml"
-  shutil.copy2("/generator/cicd/gitlab/maven/personal_settings.xml", "springboot-client-api/")
+  shutil.copy2("/generator/cicd/gitlab/maven/personal_settings.xml", clientDir)
 
   print "- Adding .gitlab-ci.yml"
-  shutil.copy2("/generator/cicd/gitlab/maven/.gitlab-ci.yml", "springboot-client-api/")
+  shutil.copy2("/generator/cicd/gitlab/maven/.gitlab-ci.yml", clientDir)
 
   print "- Generating the maven repos in Maven for Gitlab"
   templateFile = "/generator/cicd/gitlab/maven/repos.xml"
-  cicdFile = "springboot-client-api/cicd-maven.xml"
+  cicdFile = clientDir + "cicd-maven.xml"
 
-  # Go through the file and copy it to the client's dir
-  # https://stackoverflow.com/questions/62441317/best-way-to-replace-a-list-of-tokens-in-a-text-file/62452776#62452776
-  with open(templateFile, 'rb') as fi, open(cicdFile, 'wb') as fo:
-    for line in fi:
-      if "PROJECT_ID" in line:
-        line = line.replace("PROJECT_ID", os.environ["GENERATE_CLIENT_GITLAB_PROJECT_ID"])
-      fo.write(line)
+  # DO NOT UPDATE IF THE FILE ALREADY CONTAINS THE PROJECT_ID DURING UPDATES
+  found = False
+  #print "Looking for the projectId = {} on the pom.xml".format(os.environ["GENERATE_CLIENT_GITLAB_PROJECT_ID"])
+  for line in pomFile:
+    #print "pom.xml: {}".format(line)
+    if os.environ["GENERATE_CLIENT_GITLAB_PROJECT_ID"] in line:
+      #print "pom.xml: Found {} in Line: {}".format(os.environ["GENERATE_CLIENT_GITLAB_PROJECT_ID"], line)
+      found = True
+      break
 
-  # Just making sure the file was created and it's not empty
-  try:
-    file = open(cicdFile, 'r')
-    if os.stat(cicdFile).st_size == 0:
-      raise IOError("The CI/CD was supposed to be generated, but it is empty!")
+  # The project ID is in the file, so the repos are already setup
+  if not found:
+    print "- The current pom.xml does NOT contain projectId {}".format(os.environ["GENERATE_CLIENT_GITLAB_PROJECT_ID"])
+  
+    # Go through the file and copy it to the client's dir
+    # https://stackoverflow.com/questions/62441317/best-way-to-replace-a-list-of-tokens-in-a-text-file/62452776#62452776
+    with open(templateFile, 'rb') as fi, open(cicdFile, 'wb') as fo:
+      for line in fi:
+        if "PROJECT_ID" in line:
+          line = line.replace("PROJECT_ID", os.environ["GENERATE_CLIENT_GITLAB_PROJECT_ID"])
+        fo.write(line)
 
-  except IOError:
-    print "The cicdFile '{}' couldn't be generated for Gitlab!".format(cicdFile)
-    sys.exit(3)
+    # Just making sure the file was created and it's not empty
+    try:
+      file = open(cicdFile, 'r')
+      if os.stat(cicdFile).st_size == 0:
+        raise IOError("The CI/CD was supposed to be generated, but it is empty!")
 
-  # Merge the generated cicd file with the pom.xml
-  cicdTree = et.parse(cicdFile)
-  cicdRoot = cicdTree.getroot()
-  # Go through the repos elements (2) and append to the root of pom.xml
-  for cicdElement in cicdRoot:
-    pomRoot.append(cicdElement)
+    except IOError:
+      print "The cicdFile '{}' couldn't be generated for Gitlab!".format(cicdFile)
+      sys.exit(3)
 
-  # Just delete the repos file
-  os.remove(cicdFile)
+    # Merge the generated cicd file with repo info with the pom.xml
+    cicdTree = et.parse(cicdFile)
+    cicdRoot = cicdTree.getroot()
+    # Go through the repos elements (2) and append to the root of pom.xml
+    for cicdElement in cicdRoot:
+      pomRoot.append(cicdElement)
+
+    # Just delete the repos file
+    os.remove(cicdFile)
 
 # Write the final pom.xml file
-tree.write(pomFile)
+tree.write(pomFileName)
