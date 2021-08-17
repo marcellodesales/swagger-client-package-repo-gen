@@ -129,7 +129,6 @@ echo ""
 # Generates the files under the dir client-api/
 mvn generate-sources --offline
 
-
 echo ""
 echo "👷 Selected builder is '${GENERATE_CLIENT_WITH_BUILDER}'"
 if [ "${GENERATE_CLIENT_WITH_BUILDER}" == "maven" ]; then
@@ -137,6 +136,14 @@ if [ "${GENERATE_CLIENT_WITH_BUILDER}" == "maven" ]; then
   # https://stackoverflow.com/questions/24058921/how-to-recursively-delete-multiple-files-with-different-extensions/24059207#24059207
   # https://unix.stackexchange.com/questions/249501/shell-find-delete-directory-not-empty/249503#249503
   find ${CLIENT_API_LOCATION} \( -name "*travis*" -o -name "*gradle*" -o -name "*git_push*" -o -name "*sbt*" \) -exec rm -rv {} +
+
+  # Resolve values in the README file generated
+  cd ${CLIENT_API_LOCATION}
+  sed "s/>swagger-java-client</>${GENERATE_CLIENT_ARTIFACT}</g" README.md > /tmp/README-art.md
+  sed "s/>io.swagger</>${GENERATE_CLIENT_GROUPID}</g" /tmp/README-art.md > /tmp/README-grp.md
+  sed "s/>1.0.0</>${GENERATE_CLIENT_VERSION}</g" /tmp/README-grp.md > /tmp/README-ver.md
+  sed "s/ swagger-java-client/ ${GENERATE_CLIENT_ARTIFACT} ${GENERATE_CLIENT_LANG}/g" /tmp/README-ver.md > README.md
+  cd -
 fi
 
 
@@ -144,7 +151,7 @@ fi
 if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
   echo ""
   echo "🏗  Updating client metadata and files for CI/CD for ${GENERATE_CLIENT_LANG}"
-
+  echo ""
   python handler/java/maven-updater.py
 fi
 
