@@ -127,7 +127,7 @@ if [ "${GENERATE_CLIENT_WITH_BUILDER}" == "maven" ]; then
   echo "🔥 Deleting other builder artifacts such as travis, gradle, sbt that will not be used..."
   # https://stackoverflow.com/questions/24058921/how-to-recursively-delete-multiple-files-with-different-extensions/24059207#24059207
   # https://unix.stackexchange.com/questions/249501/shell-find-delete-directory-not-empty/249503#249503
-  find ${CLIENT_API_LOCATION} \( -name "*travis*" -o -name "*gradle*" -o -name "*git_push*" -o -name "*sbt*" \) -exec rm -rv {} +
+  find ${CLIENT_API_LOCATION} \( -name "*travis*" -o -name "*gradle*" -o -name "*git_push*" -o -name "*sbt*" -o -name "*AndroidManifest*" \) -exec rm -rv {} +
 
   # Resolve values in the README file generated
   cd ${CLIENT_API_LOCATION}
