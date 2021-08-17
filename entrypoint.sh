@@ -61,29 +61,13 @@ fi
 
 export CLIENT_API_LOCATION=/generator/client-api
 
-echo "- Attempt to pull existing Git Repo origin ${GIT_REMOTE} at branch ${GENERATE_CLIENT_GIT_BRANCH}..."
-# Attempt to clone the repo in the given branch
-git clone --progress --branch ${GENERATE_CLIENT_GIT_BRANCH} ${GIT_REMOTE} ${CLIENT_API_LOCATION} 2> git-clone.log
+# TODO: Move this to the handler (gitlab, github, etc)
+# Let's go first in the repository and verify if it exists
+export GENERATE_CLIENT_GITLAB_PROJECT_ID=$(curl -s --header "PRIVATE-TOKEN: ${GENERATE_CLIENT_PUBLISH_TOKEN}" -X GET 'https://gitlab.com/api/v4/projects?owned=true' | jq --arg GROUP_REPO "${GENERATE_CLIENT_GIT_USER_REPO}" '.[] | select(.path_with_namespace == $GROUP_REPO).id')
 
-# Verify if it was cloned or needs to create a new one
-if grep -q "fatal: Remote branch ${GENERATE_CLIENT_GIT_BRANCH} not found in upstream origin" "git-clone.log"; then
-  echo "- WARNING: Cloning main branch as the repo does not have the requested branch ${GENERATE_CLIENT_GIT_BRANCH}"
-  git clone --progress ${GIT_REMOTE} ${CLIENT_API_LOCATION} 2> git-clone-main.log
-
-  # Not empty
-  if grep -q "You appear to have cloned an empty repository" "git-clone-main.log"; then
-    echo "- Pulled main branch origin ${GIT_REMOTE}"
-    echo "- Creating requested branch ${GENERATE_CLIENT_GIT_BRANCH}"
-    git -C ${CLIENT_API_LOCATION} checkout -b ${GENERATE_CLIENT_GIT_BRANCH}
-    export CREATE_NEW_GIT_REPO=true
-
-  else
-    echo "- Pulled existing Git Repo origin ${GIT_REMOTE} from branch ${GENERATE_CLIENT_GIT_BRANCH}"
-  fi
-
-elif grep -q "fatal: Could not read from remote repository" "git-clone.log"; then
+if [ -z "${GENERATE_CLIENT_GITLAB_PROJECT_ID}" ]; then
   # Create a new repo because the repo does not exist
-  mkdir ${CLIENT_API_LOCATION}
+  mkdir -p ${CLIENT_API_LOCATION}
 
   git init ${CLIENT_API_LOCATION}
 
@@ -96,10 +80,42 @@ elif grep -q "fatal: Could not read from remote repository" "git-clone.log"; the
   export CREATE_NEW_GIT_REPO=true
   # When the clone worked and the repo exists, not empty
 
+  ###### INPUT REQUIRED
+  # Personal Token
+  export GITLAB_HOST=${GENERATE_CLIENT_GIT_HOST}
+  export GITLAB_TOKEN=${GENERATE_CLIENT_PUBLISH_TOKEN:?"ERROR: Must provide the Gitlab token to create a new repo"}
+  # Gitlab full group name, like suborg/org
+  export GITLAB_GROUP=${GENERATE_CLIENT_GIT_USER}
+  # The name of the new repo
+  export GITLAB_NEW_REPO_NAME=${GENERATE_CLIENT_GIT_REPO}
+  export GITLAB_NEW_REPO_DESCRIPTION="${GENERATE_CLIENT_LANG} ${GENERATE_CLIENT_WITH_LIBRARY} Client for ${GENERATE_CLIENT_GIT_REPO}"
+ 
   echo "- Initializing Git Repo at origin ${GIT_REMOTE} at branch ${GENERATE_CLIENT_GIT_BRANCH}"
+  echo ""
+  echo "👽 Creating a git repo at ${GITLAB_HOST}/${GENERATE_CLIENT_GIT_USER_REPO}"
+  
+  GENERATE_CLIENT_GITLAB_PROJECT_ID=$(. handler/gitlab/create-repo.sh)
+
 else
-  echo "- Pulled existing Git Repo origin ${GIT_REMOTE} from branch ${GENERATE_CLIENT_GIT_BRANCH}"
+  mkdir -p ${CLIENT_API_LOCATION}
+  echo "- Pull existing Git Repo origin ${GIT_REMOTE} at branch ${GENERATE_CLIENT_GIT_BRANCH}..."
+  git clone --progress --branch ${GENERATE_CLIENT_GIT_BRANCH} ${GIT_REMOTE} ${CLIENT_API_LOCATION} 2> git-clone.log
+
+  if [ -f git-clone.log ]; then
+    cat git-clone.log
+  fi
+
+  echo "- Checking out the requested branch ${GENERATE_CLIENT_GIT_BRANCH}"
+  git -C ${CLIENT_API_LOCATION} checkout -b ${GENERATE_CLIENT_GIT_BRANCH} || git -C ${CLIENT_API_LOCATION} checkout ${GENERATE_CLIENT_GIT_BRANCH}
+
+  git -C ${CLIENT_API_LOCATION} remote show origin
+  git -C ${CLIENT_API_LOCATION} branch
+
+  export CREATE_NEW_GIT_REPO=false
 fi
+
+echo ""
+echo "🔎 Found Gitlab ProjectID=${GENERATE_CLIENT_GITLAB_PROJECT_ID}"
 
 # Generate the sources, containing springboot, sources, etc repo
 echo ""

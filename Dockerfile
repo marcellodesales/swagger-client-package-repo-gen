@@ -1,7 +1,7 @@
 FROM maven:3.6.3-jdk-8-slim
 
 # Depedencies
-RUN apt-get update && apt-get install -y python git
+RUN apt-get update && apt-get install -y python git curl jq
 
 WORKDIR /generator
 
@@ -10,7 +10,7 @@ COPY pom.xml .
 RUN mvn dependency:resolve-plugins dependency:go-offline
 
 COPY entrypoint.sh .
-COPY handler .
+COPY handler handler/
 COPY cicd/ cicd/
 
 VOLUME /schemas
