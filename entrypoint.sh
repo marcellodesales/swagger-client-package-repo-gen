@@ -166,8 +166,8 @@ elif [ "$GENERATE_CLIENT_LANG" == "dart" ]; then
   echo "Dart package is the git repo itself..."
 fi
 
-git -C ${CLIENT_API_LOCATION} status > git-status.log
-if grep -q "Your branch is up to date" "git-status.log"; then
+ANYTHING_TO_COMMIT=$(git -C ${CLIENT_API_LOCATION} status --short)
+if [ -z "${ANYTHING_TO_COMMIT}" ]; then
   echo "* Nothing to update as there are no changes..."
   echo "Aborting..."
   exit 0
@@ -191,7 +191,7 @@ export SCHEMA_EXT="${SCHEMA_FILE_NAME##*.}"
 echo "Copying schemas to language location..."
 cp -v "/schemas/${SCHEMA_FILE_NAME}" "${SCHEMA_LOCATION}/swagger-api.${SCHEMA_EXT}"
 
-if [ ! -z ${CREATE_NEW_GIT_REPO} ]; then
+if [ "${CREATE_NEW_GIT_REPO}" == "true" ]; then
   echo "- Initial commit..."
   git -C ${CLIENT_API_LOCATION} add .
 
