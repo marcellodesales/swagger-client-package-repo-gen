@@ -1,3 +1,7 @@
+ARG GITHUB_REPO
+ARG GITHUB_SHA
+ARG DATE
+
 FROM maven:3.6.3-jdk-8-slim
 
 # Depedencies
@@ -15,5 +19,11 @@ COPY cicd/ cicd/
 
 VOLUME /schemas
 VOLUME /client-api
+
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md
+LABEL org.opencontainers.image.source ${GITHUB_REPO}
+LABEL org.opencontainers.image.revision ${GITHUB_SHA}
+LABEL org.opencontainers.image.created ${DATE}
+
 
 CMD ["/bin/bash", "/generator/entrypoint.sh"]

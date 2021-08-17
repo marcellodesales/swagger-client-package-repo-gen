@@ -38,7 +38,7 @@ jobs:
 
       - name: Build docker image
         # https://stackoverflow.com/questions/55756372/when-using-buildkit-with-docker-how-do-i-see-the-output-of-run-commands/55759337#55759337
-        run: DOCKER_BUILDKIT=1 docker build --progress=plain -t ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} .
+        run: DOCKER_BUILDKIT=1 docker build --build-arg GITHUB_SHA==${{ github.sha }} --build-arg DATE=${{ steps.prep.outputs.created }} --build-arg GITHUB_REPO=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY} --progress=plain -t ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} .
 
       - name: Tag with the branch name
         run: docker tag ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY}/${{env.GIHUB_IMAGE_REPO_NAME}}:${GITHUB_REF##*/}
