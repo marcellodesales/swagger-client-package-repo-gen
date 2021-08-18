@@ -119,9 +119,7 @@ fi
 echo ""
 
 # Delete all language files before it generates again. It guarantees that all files are generated from the source
-if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
-  find ${CLIENT_API_LOCATION} \( -name "*.java" -o -name "*.dart" -o -name "*.js" -o -name "*.go" \) -exec rm -rv {} +
-fi
+find ${CLIENT_API_LOCATION} \( -name "*.java" -o -name "*.dart" -o -name "*.js" -o -name "*.go" -o -name "*.md" \) -exec rm -rv {} +
 
 # Generates the files under the dir client-api/
 mvn generate-sources --offline
@@ -219,7 +217,7 @@ else
   echo "- Update commit..."
   # https://stackoverflow.com/questions/5064563/add-line-break-to-git-commit-m-from-the-command-line/5064653#5064653
   git -C ${CLIENT_API_LOCATION} commit --no-edit -F- <<EOF
-:new:  Updating client API
+:new:  Updating client API ${GENERATE_CLIENT_VERSION}
 
 * Generated on $(date -d now)"
 * By ${GENERATE_CLIENT_AUTHOR_FULLNAME} <${GENERATE_CLIENT_AUTHOR_EMAIL}>
