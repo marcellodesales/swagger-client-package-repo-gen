@@ -217,7 +217,7 @@ else
   echo "- Update commit..."
   # https://stackoverflow.com/questions/5064563/add-line-break-to-git-commit-m-from-the-command-line/5064653#5064653
   git -C ${CLIENT_API_LOCATION} commit --no-edit -F- <<EOF
-:new:  Updating client API
+:new:  Updating client API ${GENERATE_CLIENT_VERSION}
 
 * Generated on $(date -d now)"
 * By ${GENERATE_CLIENT_AUTHOR_FULLNAME} <${GENERATE_CLIENT_AUTHOR_EMAIL}>
