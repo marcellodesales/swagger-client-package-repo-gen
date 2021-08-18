@@ -118,6 +118,11 @@ else
 fi
 echo ""
 
+# Delete all language files before it generates again. It guarantees that all files are generated from the source
+if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
+  find ${CLIENT_API_LOCATION} \( -name "*.java" -o -name "*.dart" -o -name "*.js" -o -name "*.go" \) -exec rm -rv {} +
+fi
+
 # Generates the files under the dir client-api/
 mvn generate-sources --offline
 
@@ -127,7 +132,7 @@ if [ "${GENERATE_CLIENT_WITH_BUILDER}" == "maven" ]; then
   echo "🔥 Deleting other builder artifacts such as travis, gradle, sbt that will not be used..."
   # https://stackoverflow.com/questions/24058921/how-to-recursively-delete-multiple-files-with-different-extensions/24059207#24059207
   # https://unix.stackexchange.com/questions/249501/shell-find-delete-directory-not-empty/249503#249503
-  find ${CLIENT_API_LOCATION} \( -name "*travis*" -o -name "*gradle*" -o -name "*git_push*" -o -name "*sbt*" \) -exec rm -rv {} +
+  find ${CLIENT_API_LOCATION} \( -name "*travis*" -o -name "*gradle*" -o -name "*git_push*" -o -name "*sbt*" -o -name "*AndroidManifest*" \) -exec rm -rv {} +
 
   # Resolve values in the README file generated
   cd ${CLIENT_API_LOCATION}
@@ -137,7 +142,6 @@ if [ "${GENERATE_CLIENT_WITH_BUILDER}" == "maven" ]; then
   sed "s/ swagger-java-client/ ${GENERATE_CLIENT_ARTIFACT} ${GENERATE_CLIENT_LANG}/g" /tmp/README-ver.md > README.md
   cd -
 fi
-
 
 # Only generate if the repo was created to avoid errors
 if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
