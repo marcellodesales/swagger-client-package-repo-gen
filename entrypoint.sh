@@ -119,9 +119,7 @@ fi
 echo ""
 
 # Delete all language files before it generates again. It guarantees that all files are generated from the source
-if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
-  find ${CLIENT_API_LOCATION} \( -name "*.java" -o -name "*.dart" -o -name "*.js" -o -name "*.go" \) -exec rm -rv {} +
-fi
+find ${CLIENT_API_LOCATION} \( -name "*.java" -o -name "*.dart" -o -name "*.js" -o -name "*.go" -o -name "*.md" \) -exec rm -rv {} +
 
 # Generates the files under the dir client-api/
 mvn generate-sources --offline
