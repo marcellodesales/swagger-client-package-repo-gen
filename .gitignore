@@ -1,1 +1,8 @@
 client-apii/
+
+.gradle/
+.idea/
+gradle/
+gradlew
+gradlew.bat
+
