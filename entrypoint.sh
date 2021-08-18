@@ -118,6 +118,11 @@ else
 fi
 echo ""
 
+# Delete all language files before it generates again. It guarantees that all files are generated from the source
+if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
+  find ${CLIENT_API_LOCATION} \( -name "*.java" -o -name "*.dart" -o -name "*.js" -o -name "*.go" \) -exec rm -rv {} +
+fi
+
 # Generates the files under the dir client-api/
 mvn generate-sources --offline
 
@@ -137,7 +142,6 @@ if [ "${GENERATE_CLIENT_WITH_BUILDER}" == "maven" ]; then
   sed "s/ swagger-java-client/ ${GENERATE_CLIENT_ARTIFACT} ${GENERATE_CLIENT_LANG}/g" /tmp/README-ver.md > README.md
   cd -
 fi
-
 
 # Only generate if the repo was created to avoid errors
 if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
