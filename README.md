@@ -38,6 +38,7 @@ Swagger API Code generator and Git Repo Management for https://swagger.io/docs/o
 * Use docker-compose to run a container with the generation
 
 ```console
+$ curl -o parking-plus.json https://demonstracao.parkingplus.com.br/servicos/v2/api-docs
 $ docker-compose --env-file parking-plus.env up --build
 ```
 
