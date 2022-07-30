@@ -31,6 +31,82 @@ Swagger API Code generator and Git Repo Management for https://swagger.io/docs/o
   * Use the `template-docker-compose.env`
 * Invoke `docker-compose` with it and profit
 
+# Setup
+
+1. Download a client swagger docs json file
+
+```console
+$ curl -o parking-plus.json https://demonstracao.parkingplus.com.br/servicos/v2/api-docs
+```
+
+2. Create the env file, say `parking-plus.env` with the properties for swagger gen to generate code
+
+> **NOTE**: These files must be on the same dir
+
+```properties
+#####
+##### Swagger Gen Language settings
+#####
+
+# The name of the file downloaded from step 1 download
+SCHEMA_FILE_NAME=parking-plus.json
+
+#####
+##### Source-code specific generation
+#####
+
+# The target language to generate the code
+GENERATE_CLIENT_LANG=java
+
+# The target library to be used for the selected code
+GENERATE_CLIENT_WITH_LIBRARY=feign
+
+# The packages for the generation framework for api, invoker, model, in this case
+# java package where the code lives
+GENERATE_CLIENT_MODEL_PACKAGE=cash.super_.platform.client.parkingplus.model
+GENERATE_CLIENT_API_PACKAGE=cash.super_.platform.client.parkingplus.api
+GENERATE_CLIENT_INVOKER_PACKAGE=cash.super_.platform.client.parkingplus.invoker
+
+#####
+##### Swagger Gen Packaging settings
+#####
+
+# The group id used for the package, in this case, java 
+GENERATE_CLIENT_GROUPID=cash.super_.platform.client
+
+# The name of the artifact of the package, in this case, java
+GENERATE_CLIENT_ARTIFACT=parking-plus-client
+
+# The version of the client... Will be SNAPSHOT by default
+GENERATE_CLIENT_VERSION=2.0.0
+
+#####
+##### Swagger Gen Packaging and Version control for pushing automatically
+#####
+
+# CI/CD Settings for packages like java to include pom.xml (git repo) for ssh push
+GENERATE_CLIENT_URL=https://gitlab.com/supercash/clients/parking-plus-client
+GENERATE_CLIENT_GIT_HOST=gitlab.com
+GENERATE_CLIENT_GIT_USER_REPO=supercash/clients/parking-plus-client
+GENERATE_CLIENT_GIT_BRANCH=develop
+GENERATE_CLIENT_GITLAB_PROJECT_ID=22268428
+
+# The committer information that's recorded in the commit of new changes
+GENERATE_CLIENT_AUTHOR_FULLNAME=Marcello de Sales
+GENERATE_CLIENT_AUTHOR_EMAIL=marcello.desales@gmail.com
+
+#####
+##### Controls to push to git repo or publish to maven directly
+#####
+
+# Push code to the git repo when generating
+GENERATE_CLIENT_GIT_PUSH=true
+
+# Publish to maven directly if not done by CI/CD
+# Uncomment if you don't have CI/CD to perform the publish
+#GENERATE_CLIENT_PUBLISH_TOKEN=XyV******du9r
+```
+
 # Running
 
 > **ATTENTION**: Make sure to copy the template `template-docker-compose.env` and set your own variables.
