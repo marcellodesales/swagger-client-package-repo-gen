@@ -2,6 +2,10 @@
 
 # Most variables are from https://github.com/swagger-api/swagger-codegen/blob/master/modules/swagger-codegen-maven-plugin/README.md
 
+echo "******************************"
+env
+echo "******************************"
+
 : ${SCHEMA_FILE_NAME?"Must set SCHEMA_FILE_NAME"}
 
 if [ ! -f "/schemas/${SCHEMA_FILE_NAME}" ]; then
@@ -53,9 +57,38 @@ fi
 
 export CLIENT_API_LOCATION=/generator/client-api
 
-# TODO: Move this to the handler (gitlab, github, etc)
-# Let's go first in the repository and verify if it exists
-export GENERATE_CLIENT_GITLAB_PROJECT_ID=$(curl -s --header "PRIVATE-TOKEN: ${GENERATE_CLIENT_PUBLISH_TOKEN}" -X GET 'https://gitlab.com/api/v4/projects?owned=true' | jq --arg GROUP_REPO "${GENERATE_CLIENT_GIT_USER_REPO}" '.[] | select(.path_with_namespace == $GROUP_REPO).id')
+CURRENT_DIR=$(ls -A ${CLIENT_API_LOCATION})
+if [ -n "${CURRENT_DIR}" ]; then
+  # as we don't have permissions to delete the dir, we have to clean the contents (due to docker volume)
+  echo "- Removing current contents of dir ${CLIENT_API_LOCATION} before cloning"
+  rm -rf ${CLIENT_API_LOCATION}/*
+  rm -rf ${CLIENT_API_LOCATION}/.* 2> /dev/null
+fi
+
+echo "- Attempt to pull existing Git Repo origin ${GIT_REMOTE} at branch ${GENERATE_CLIENT_GIT_BRANCH}..."
+# Attempt to clone the repo in the given branch
+echo "git clone --progress --branch ${GENERATE_CLIENT_GIT_BRANCH} ${GIT_REMOTE} ${CLIENT_API_LOCATION}"
+git clone --progress --branch ${GENERATE_CLIENT_GIT_BRANCH} ${GIT_REMOTE} ${CLIENT_API_LOCATION}/. 2> git-clone.log
+cat git-clone.log
+
+if grep -q "Bad configuration option" "git-clone.log"; then
+  echo "- ERROR: ssh config is not correct... please read the logs and fix the issue to clone the required repo..."
+  exit 1
+fi
+
+# Verify if it was cloned or needs to create a new one
+if grep -q "fatal: Remote branch ${GENERATE_CLIENT_GIT_BRANCH} not found in upstream origin" "git-clone.log"; then
+  echo "- WARNING: Cloning main branch as the repo does not have the requested branch ${GENERATE_CLIENT_GIT_BRANCH}"
+  echo "git clone --progress ${GIT_REMOTE} ${CLIENT_API_LOCATION}"
+  git clone --progress ${GIT_REMOTE} ${CLIENT_API_LOCATION} 2> git-clone-main.log
+  cat git-clone-main.log
+
+  # Not empty
+  if grep -q "You appear to have cloned an empty repository" "git-clone-main.log"; then
+    echo "- Pulled main branch origin ${GIT_REMOTE}"
+    echo "- Creating requested branch ${GENERATE_CLIENT_GIT_BRANCH}"
+    git -C ${CLIENT_API_LOCATION} checkout -b ${GENERATE_CLIENT_GIT_BRANCH}
+    export CREATE_NEW_GIT_REPO=true
 
 if [ -z "${GENERATE_CLIENT_GITLAB_PROJECT_ID}" ]; then
   # Create a new repo because the repo does not exist
@@ -144,9 +177,8 @@ fi
 # Only generate if the repo was created to avoid errors
 if [ "${GENERATE_CLIENT_LANG}" == "java" ]; then
   echo ""
-  echo "🏗  Updating client metadata and files for CI/CD for ${GENERATE_CLIENT_LANG}"
-  echo ""
-  python handler/java/maven-updater.py
+  echo "🏗  Updating client metadata for CI/CD"
+  python /handler/java/maven-updater.py
 fi
 
 echo ""
@@ -167,13 +199,19 @@ elif [ "$GENERATE_CLIENT_LANG" == "dart" ]; then
   echo "Dart package is the git repo itself..."
 fi
 
-ANYTHING_TO_COMMIT=$(git -C ${CLIENT_API_LOCATION} status --short)
-if [ -z "${ANYTHING_TO_COMMIT}" ]; then
+echo ""
+echo "🧐 Verifying changes..."
+echo "git -C ${CLIENT_API_LOCATION} status"
+git -C ${CLIENT_API_LOCATION} status > git-status.log
+cat git-status.log
+if ! grep -q "Changes not staged for commit" "git-status.log" && ! grep -q "Untracked files:" "git-status.log"; then
   echo "* Nothing to update as there are no changes..."
-  echo "Aborting..."
+  git -C ${CLIENT_API_LOCATION} status
+  echo "Aborting... Check the contents of ${CLIENT_API_LOCATION}"
   exit 0
 fi
 
+echo ""
 echo ""
 echo "🎨 Copying originating schema '/schemas/${SCHEMA_FILE_NAME}'"
 echo ""
@@ -255,20 +293,20 @@ fi
 echo ""
 
 # Finally, copy the generated artifacts to the client
-export CLIENT_DIR="$GENERATE_CLIENT_ARTIFACT-${GENERATE_CLIENT_WITH_LIBRARY}"
-if [ -d "/client-api/${CLIENT_DIR}" ]; then
-  echo ""
-  echo "💥 Deleting previous build from directory '/client-api/${CLIENT_DIR}'"
-  echo ""
-  rm -rf /client-api/${CLIENT_DIR}
-fi
-cd ..
-mv ${CLIENT_API_LOCATION} ${CLIENT_DIR}
+#export CLIENT_DIR="$GENERATE_CLIENT_ARTIFACT-${GENERATE_CLIENT_WITH_LIBRARY}"
+#if [ -d "/client-api/${CLIENT_DIR}" ]; then
+#  echo ""
+#  echo "💥 Deleting previous build from directory '/client-api/${CLIENT_DIR}'"
+#  echo ""
+#  rm -rf /client-api/${CLIENT_DIR}
+#fi
+#cd ..
+#mv ${CLIENT_API_LOCATION} ${CLIENT_DIR}
 
 echo ""
 echo "🍻 Local deploy to /client-api/${CLIENT_DIR}"
 echo ""
-cp -R -v ${CLIENT_DIR}/ /client-api
+#cp -R -v ${CLIENT_DIR}/ /client-api
 
 echo ""
 echo "✨ Done!"
