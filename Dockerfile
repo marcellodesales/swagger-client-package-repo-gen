@@ -10,7 +10,7 @@ COPY pom.xml .
 RUN mvn dependency:resolve-plugins dependency:go-offline
 
 COPY entrypoint.sh .
-COPY handler handler/
+COPY handler/ /handler
 COPY cicd/ cicd/
 
 VOLUME /schemas

@@ -1,8 +1,7 @@
-client-apii/
+client-api/
 
 .gradle/
 .idea/
 gradle/
 gradlew
 gradlew.bat
-
