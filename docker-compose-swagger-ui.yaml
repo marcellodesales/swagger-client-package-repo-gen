@@ -1,0 +1,21 @@
+version: "3.9"
+# https://medium.com/wesionary-team/swagger-ui-on-docker-for-testing-rest-apis-5b3d5fcdee7
+
+services:
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    container_name: swagger-ui
+
+    # specify a port number
+    ports:
+      - "8081:8080"
+
+    # Mount directories containing swagger docs
+    volumes:
+      - ./swagger-docs:/swagger-docs
+
+    # Set which file to load
+    environment:
+      SWAGGER_JSON: /swagger-docs/parking-plus-schema-july-2022.json
+      #API_URL: doc/openapi.yaml

@@ -1,0 +1,1764 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "<#noparse>\n### Objetivo\n\nEste documento tem por objetivo definir a interface de integração entre o sistema Parking Plus Enterprise e Aplicativos para Smartphones. A integração possibilitará o pagamento da estadia dos clientes do estacionamento através desse aplicativo.\n\n### Integração\nA integração entre as aplicações será realizada por meio de webservice disponibilizados em ambiente de internet. Esse webservice possibilitará a consulta do valor da estadia dos tickets e o pagamento do ticket do estacionamento utilizando como meio de pagamento o cartão de crédito.\n\nO sistema Parking Plus Enterprise encaminha os dados do cliente para os sistemas Gateway de Pagamento de forma que estes possam solicitar a autorização da cobrança em cartão de crédito, da estadia do estacionamento.\n\n### Especificação dos Serviços (Webservices)\nO protocolo de comunicação utilizado para a integração entre o sistema Parking Plus Enterprise e o Aplicativo será o HTTPS.\nO webservice utilizará a tecnologia REST para o acesso aos serviços, e JSON para o POST e o retorno das informações solicitadas para o webservice. Dessa forma, o aplicativo desenvolvido deverá atender aos requisitos necessários para acessar esses serviços.\n\n\n\n## Mapa de Erros\n|errorCode |descrição |mensagem padrão |\n| --- | --- | --- |\n| 0 | Nenhum erro. |   |\n| 999 |Utilizado quando alguma exceção não especifica é lançada.| Erro no processamento da solicitação. |\n|1 | O ticket não foi encontrado no banco do Enterprise. | Ticket não encontrado. |\n| 2 | Garagem offline no enterprise. | Serviço indisponível no momento. |\n| 3 | O número do ticket possui CRC inválido. | O número do ticket digitado não é um número de ticket válido. |\n| 4 |O ticket não foi encontrado no pátio. Ocorre se o ticket já saiu do pátio. Pode ocorrer se um ticket correto(ainda no pátio) não foi sincronizado e um ticket de outra garagem é encontrado mas o mesmo já saiu. | Ticket inválido ou já processado. |\n| 5* | A garagem não possui uma Loja Virtual Cadastrada. | A Garagem não possui uma Loja Virtual Cadastrada. |\n| 6 | A garagem não se encontra na whitelist de garagens permitidas da API. | Não é permitida a validação de tickets desta garagem. |\n| 7 | O ticket já recebeu uma validação hoje. | Você já ganhou seu estacionamento gratuito hoje. |\n| 8 | O valor do pagamento é inválido. Valor a pagar é maior que o sendo pago. | Valor Inválido. |\n| 9 | Transação já realizada. idTransacao já existe no banco. | Transação já realizada. |\n| 10* | A apikey enviada é inválida. | Aplicativo não autorizado! |\n| 11** | ~~O cartão possui CRC inválido.~~ | ~~O número do Cartão Pré-Pago é inválido.~~ |\n| 12** | ~~O cartão não foi encontrado no banco.~~ | ~~Cartão Pré-Pago não encontrado.~~ |\n| 13 | Erro ao descriptografar o cartão de crédito. | Cartão com problema, tente recadastrar. |\n| 14 | Erro ao tentar se conectar com o gateway de pagamento. | Erro de conexão com o Gateway! |\n| 15 | Existe alguma restrição para o cartão. | Serviço não autorizado para este cartão! |\n| 16 | Erro de transação com o gateway. | Sua transação não foi concluída. Aguarde alguns instantes e tente novamente. |\n| 17 | Emissora do cartão indisponível para o gateway. | Emissor indisponível! Aguarde alguns instantes e tente novamente ou entre em contato com a emissora de seu cartão. |\n| 18* | Existe algum erro na configuração do gateway. | Pagamento indisponível no momento. |\n| 19 | Informações do cartão inválidas. | Cartão inválido! Entre em contato com a emissora do seu cartão para mais detalhes. |\n| 20 | A transação foi negada pelo emissor do cartão. | Transação negada pelo emissor! Entre em contato com a emissora do seu cartão para mais detalhes. |\n| 21 | Pagamento desabilitado. | O pagamento está momentaneamente desabilitado. |\n| 22 | Erro ao tentar criptografar o cartão de crédito. | Erro ao criptografar cartão! |\n| 23 | Erro ao tentar encontrar o cliente no banco de dados. Pode ocorrer se o UDID do cliente for alterado mas o cartão criptografado antigo for utilizado. | Cliente alterado! recadastre o cartão. |\n| 24 | Erro ao descriptografar um cartão de crédito. | Cartão de crédito com problema, tente recadastrar. |\n| 25** | ~~O Método chamado foi descontinuado.~~ | ~~Este método foi descontinuado.~~ |\n| 26 | Id/Chave de garagem não encontrada no sistema | Falha ao encontrar garagem! |\n\n\n\n\\* Deve ser corrigido durante a homologação\n\n** Apenas retornados por métodos internos ou ainda não documentados\n\n</#noparse>",
+    "version": "2.0",
+    "title": "API de pagamento mobile WPS Brasil",
+    "contact": {
+      "name": "WPS Brasil",
+      "url": "www.wpsbrasil.com"
+    }
+  },
+  "host": "demonstracao.parkingplus.com.br",
+  "basePath": "/servicos",
+  "tags": [
+    {
+      "name": "servico-carga-credito-credenciado-2",
+      "description": "Servico Carga Credito Credenciado 2"
+    },
+    {
+      "name": "servico-pagamento-ticket-2",
+      "description": "Servico Pagamento Ticket 2"
+    },
+    {
+      "name": "servico-pagamento-cartao-debito-2",
+      "description": "Servico Pagamento Cartao Debito 2"
+    }
+  ],
+  "paths": {
+    "/2/carregarCredenciado": {
+      "post": {
+        "tags": [
+          "servico-carga-credito-credenciado-2"
+        ],
+        "summary": "Tenta efetuar a recarda de um cardão de crédito WPS",
+        "operationId": "carregarCredenciadoUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(chaveGaragem + bandeira + enderecoIP + idTransacao + udid + chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PagamentoCredenciadoRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagamentoCredenciadoRequest"
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    },
+    "/2/creditarCartao": {
+      "post": {
+        "tags": [
+          "servico-pagamento-cartao-debito-2"
+        ],
+        "summary": "Tenta efetuar a recarda de um cardão de débito WPS",
+        "operationId": "creditarCartaoUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(numeroCartao + chaveGaragem + bandeira + enderecoIP + idTransacao + udid + chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PagamentoCartaoDebitoRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/RetornoCreditarCartao"
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    },
+    "/2/pagamento": {
+      "post": {
+        "tags": [
+          "servico-pagamento-ticket-2"
+        ],
+        "summary": "Função para efetuar o **Pagamento de Ticket** do Estacionamento",
+        "description": "Esta função deverá ser utilizada para efetuar o pagamento da tarifa do estacionamento utilizando, como forma de pagamento, o cartão de crédito. Esta função utiliza um Gateway de pagamento cadastrado no Enterprise para tentar efetuar o pagamento. O pagamento pode ser realizado passando o **cartão de crédito** ou **cartão criptografado**.",
+        "operationId": "pagarTicketUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(numeroTicket + udid + enderecoIp + bandeira + portador + idTransacao + chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PagamentoRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/RetornoPagamento"
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    },
+    "/2/pagamentoAutorizado": {
+      "post": {
+        "tags": [
+          "servico-pagamento-ticket-2"
+        ],
+        "summary": "Função para efetuar o **Pagamento de Ticket** do Estacionamento sem utilizar um Gateway",
+        "description": "Esta função deverá ser utilizada para efetuar o pagamento da tarifa do estacionamento quando a autorização do pagamento não é necessária.",
+        "operationId": "pagarTicketAutorizadoUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(numeroTicket + udid + bandeira + idTransacao + chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PagamentoAutorizadoRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/RetornoPagamento"
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    },
+    "/2/pagamentosEfetuados": {
+      "get": {
+        "tags": [
+          "servico-pagamento-ticket-2"
+        ],
+        "summary": "Função para consultar **Pagamentos Efetuados**",
+        "description": "Esta função deverá ser utilizada para verificar os pagamentos efetuados por um cliente. Ela retorna os pagamentos em ordem decrescente de data. Os parâmetros [inicio] e [limite] podem ser utilizados para paginação.",
+        "operationId": "pagamentosEfetuadosUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(udid + chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "udid",
+            "in": "query",
+            "description": "Identificador único para o usuário",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "description": "Indice do primeiro objeto a ser retornado",
+            "required": false,
+            "type": "integer",
+            "default": 0,
+            "format": "int32"
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "description": "Quantidade maxima de objectos retornados (máximo 50).",
+            "required": false,
+            "type": "integer",
+            "default": 30,
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PagamentoEfetuado"
+              }
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    },
+    "/2/promocoes": {
+      "get": {
+        "tags": [
+          "servico-pagamento-ticket-2"
+        ],
+        "summary": "Função para obter a lista de **Promoções Disponíveis** para uma garagem",
+        "description": "Esta função deverá ser utilizada para obter uma lista de promoções válidas para uma garagem. As promoções podem ser cadastradas no enterprise.",
+        "operationId": "getPromocoesUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "idGaragem",
+            "in": "query",
+            "description": "ID da garagem",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "guidGaragem",
+            "in": "query",
+            "description": "GUID da garagem",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "tiposPromocao",
+            "in": "query",
+            "description": "Lista de tipos de promoção aceitos (SIMPLE = Qualquer promoção que precise somente do ID para ser utilizada)",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "numeroTicket",
+            "in": "query",
+            "description": "Número do código de barras do ticket do estacionamento",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "description": "Token do usuário",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Promocao"
+              }
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    },
+    "/2/ticket": {
+      "post": {
+        "tags": [
+          "servico-pagamento-ticket-2"
+        ],
+        "summary": "Função para **Consultar Ticket** do Estacionamento",
+        "description": "Esta função deverá ser utilizada para verificar o status do ticket do estacionamento. Será possível através dos dados de retorno desse serviço, verificar o valor da tarifa a ser paga pelo cliente, e identificar os campos obrigatórios para a solicitação de pagamento.",
+        "operationId": "getTicketUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(udid + chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TicketRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/RetornoConsulta"
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    },
+    "/2/ticket/{numeroTicket}": {
+      "get": {
+        "tags": [
+          "servico-pagamento-ticket-2"
+        ],
+        "summary": "Função para **Consultar Ticket** do Estacionamento",
+        "description": "Esta função deverá ser utilizada para verificar o status do ticket do estacionamento. Será possível através dos dados de retorno desse serviço, verificar o valor da tarifa a ser paga pelo cliente, e identificar os campos obrigatórios para a solicitação de pagamento.",
+        "operationId": "getTicketUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "numeroTicket",
+            "in": "path",
+            "description": "Número do código de barras do ticket do estacionamento",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "udid",
+            "in": "query",
+            "description": "Identificador único para o usuário",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKey",
+            "in": "query",
+            "description": "sha1(udid + chave*)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "in": "query",
+            "description": "ID da ApiKey",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "idGaragem",
+            "in": "query",
+            "description": "ID da Garagem referente ao ticket do estacionamento.\nCaso não utilizado o sistema tentará buscar o ticket pelo GUID ou em todas as garagens.\nRetorna erro se mais de um ticket for encontrado.",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "guidGaragem",
+            "in": "query",
+            "description": "GUID da Garagem referente ao ticket do estacionamento.\nCaso não utilizado o sistema tentará buscar o ticket pelo ID ou em todas as garagens.\nRetorna erro se mais de um ticket for encontrado.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "tiposPromocao",
+            "in": "query",
+            "description": "Lista de tipos de promoção aceitos (SIMPLE = Qualquer promoção que precise somente do ID para ser utilizada)",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/RetornoConsulta"
+            }
+          },
+          "401": {
+            "description": "ApiKey inválida",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "403": {
+            "description": "Falha ao executar operação",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "404": {
+            "description": "Entidade não encontrada",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          },
+          "500": {
+            "description": "Erro inesperado",
+            "schema": {
+              "$ref": "#/definitions/RetornoErro"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Promocao": {
+      "type": "object",
+      "required": [
+        "descricao",
+        "exigeAutenticacao",
+        "horarioFim",
+        "horarioInicio",
+        "imagem",
+        "nome",
+        "quantidadeDisponivel",
+        "regulamento",
+        "systemId",
+        "tipoDesconto",
+        "tipoPromocao",
+        "titulo",
+        "validade",
+        "valorAlvo",
+        "valorDesconto"
+      ],
+      "properties": {
+        "bandeira": {
+          "type": "string",
+          "description": "Bandeira caso o tipoPromoção seja BANDEIRA",
+          "enum": [
+            "ELO",
+            "AURA",
+            "AMEX",
+            "VISA",
+            "MASTERCARD",
+            "DISCOVER",
+            "HIPERCARD",
+            "DINERS",
+            "JCB"
+          ]
+        },
+        "descricao": {
+          "type": "string",
+          "description": "A descrição da promoção"
+        },
+        "diasSemana": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "DOMINGO",
+              "SEGUNDA",
+              "TERCA",
+              "QUARTA",
+              "QUINTA",
+              "SEXTA",
+              "SABADO"
+            ]
+          }
+        },
+        "exigeAutenticacao": {
+          "type": "boolean",
+          "description": "Se a promoção exige autenticação",
+          "example": false
+        },
+        "horarioFim": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Horário em que a promoção pode ser utilizada (fim)"
+        },
+        "horarioInicio": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Horário em que a promoção pode ser utilizada (inicio)"
+        },
+        "imagem": {
+          "type": "string",
+          "description": "Url para uma imagem para a promoção"
+        },
+        "nome": {
+          "type": "string",
+          "description": "O nome da promoção (até 15 caracteres)"
+        },
+        "quantidadeDisponivel": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Quantidade disponível desta promoção"
+        },
+        "regulamento": {
+          "type": "string",
+          "description": "A regulamentação da promoção"
+        },
+        "systemId": {
+          "type": "integer",
+          "format": "int64",
+          "description": "O id da promoção"
+        },
+        "tipoDesconto": {
+          "type": "string",
+          "description": "O tipo do desconto",
+          "enum": [
+            "PORCENTAGEM",
+            "VALOR",
+            "PERMANENCIA",
+            "PERMANENCIA_FINAL",
+            "MUDANCA_TARIFA"
+          ]
+        },
+        "tipoPromocao": {
+          "type": "string",
+          "description": "O tipo da promoção",
+          "enum": [
+            "BANDEIRA",
+            "CUPOM"
+          ]
+        },
+        "titulo": {
+          "type": "string",
+          "description": "Titulo da promoção"
+        },
+        "validade": {
+          "type": "string",
+          "format": "date-time",
+          "description": "A data de validade da promoção"
+        },
+        "valorAlvo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor necessário para atingir a promoção"
+        },
+        "valorDesconto": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Caso tipoDesconto; VALOR: valor do desconto; PORCENTAGEM: porcentagem de desconto; PERMANENCIA: tempo em minutos; MUDANCA_TARIFA: número da tabela de tarifa"
+        }
+      }
+    },
+    "PagamentoCartaoDebitoRequest": {
+      "type": "object",
+      "required": [
+        "bandeira",
+        "cartaoDeCredito",
+        "chaveGaragem",
+        "codigoDeSeguranca",
+        "cpfCnpj",
+        "enderecoIp",
+        "idTransacao",
+        "numeroCartao",
+        "portador",
+        "udid",
+        "validade",
+        "valor"
+      ],
+      "properties": {
+        "bandeira": {
+          "type": "string",
+          "description": "Bandeira do cartão de crédito utilizado no pagamento do ticket."
+        },
+        "cartaoCriptografado": {
+          "type": "string",
+          "description": "O Cartão criptografado."
+        },
+        "cartaoDeCredito": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Número do cartão de crédito a ser utilizado para pagamento."
+        },
+        "chaveGaragem": {
+          "type": "string",
+          "description": "A chave da garagem. Pode ser obtida pelo método consultarGaragens."
+        },
+        "codigoDeSeguranca": {
+          "type": "string",
+          "description": "Código de segurança do carão de crédito."
+        },
+        "cpfCnpj": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Número do documento do cliente para geração do RPS."
+        },
+        "dadosCnpj": {
+          "description": "Dados de pessoa jurídica.",
+          "$ref": "#/definitions/DadosCnpj"
+        },
+        "dadosCpf": {
+          "description": "Dados de pessoa física.",
+          "$ref": "#/definitions/DadosCpf"
+        },
+        "enderecoIp": {
+          "type": "string",
+          "description": "Endereço IP do dispositivo conectado ao serviço."
+        },
+        "idTransacao": {
+          "type": "string",
+          "description": "Um id único para a transação."
+        },
+        "numeroCartao": {
+          "type": "string",
+          "description": "O número do cartão de débito WPS."
+        },
+        "portador": {
+          "type": "string",
+          "description": "Nome do portador do cartão de crédito."
+        },
+        "udid": {
+          "type": "string",
+          "description": "Identificador único do dispositivo que acessa o serviço."
+        },
+        "validade": {
+          "type": "string",
+          "description": "Validade do cartão de crédito no formato MMYYYY."
+        },
+        "valor": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Número inteiro representando o valor a pagar em centavos. (R$1,50 = 150)"
+        }
+      }
+    },
+    "DadosEndereco": {
+      "type": "object",
+      "required": [
+        "bairro",
+        "cep",
+        "cidade",
+        "endereco",
+        "ibge",
+        "numero",
+        "uf"
+      ],
+      "properties": {
+        "bairro": {
+          "type": "string",
+          "description": "Bairro."
+        },
+        "cep": {
+          "type": "string",
+          "description": "CEP."
+        },
+        "cidade": {
+          "type": "string",
+          "description": "Cidade."
+        },
+        "complemento": {
+          "type": "string",
+          "description": "Complemento."
+        },
+        "endereco": {
+          "type": "string",
+          "description": "Endereço."
+        },
+        "ibge": {
+          "type": "string",
+          "description": "Número IBGE."
+        },
+        "numero": {
+          "type": "string",
+          "description": "Número."
+        },
+        "uf": {
+          "type": "string",
+          "description": "UF.",
+          "enum": [
+            "AC",
+            "AL",
+            "AP",
+            "AM",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MT",
+            "MS",
+            "MG",
+            "PA",
+            "PB",
+            "PR",
+            "PE",
+            "PI",
+            "RJ",
+            "RN",
+            "RS",
+            "RO",
+            "RR",
+            "SC",
+            "SP",
+            "SE",
+            "TO"
+          ]
+        }
+      }
+    },
+    "NotaInfo": {
+      "type": "object",
+      "required": [
+        "cnpj",
+        "data",
+        "erro",
+        "qrCode",
+        "valida",
+        "valor"
+      ],
+      "properties": {
+        "cnpj": {
+          "type": "string",
+          "description": "CNPJ do emissor"
+        },
+        "data": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data da nota"
+        },
+        "erro": {
+          "type": "string",
+          "description": "Mensagem de erro caso a nota seja inválida"
+        },
+        "qrCode": {
+          "type": "string",
+          "description": "Código QR da nota"
+        },
+        "valida": {
+          "type": "boolean",
+          "description": "Se a nota é válida",
+          "example": false
+        },
+        "valor": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Valor da nota"
+        }
+      }
+    },
+    "PagamentoAutorizadoRequest": {
+      "type": "object",
+      "required": [
+        "bandeira",
+        "idTransacao",
+        "numeroTicket",
+        "udid",
+        "valor"
+      ],
+      "properties": {
+        "bandeira": {
+          "type": "string",
+          "description": "Bandeira do cartão de crédito"
+        },
+        "cpfCnpj": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Número do documento do cliente para geração do RPS"
+        },
+        "dadosCnpj": {
+          "description": "Dados de pessoa jurídica.",
+          "$ref": "#/definitions/DadosCnpj"
+        },
+        "dadosCpf": {
+          "description": "Dados de pessoa física.",
+          "$ref": "#/definitions/DadosCpf"
+        },
+        "faturado": {
+          "type": "boolean",
+          "description": "Valor faturado.",
+          "example": false
+        },
+        "guidGaragem": {
+          "type": "string",
+          "description": "GUID da Garagem referente ao ticket do estacionamento. Caso não utilizado o sistema tentará buscar o ticket pelo ID ou em todas as garagens. Retorna erro se mais de um ticket for encontrado"
+        },
+        "idGaragem": {
+          "type": "integer",
+          "format": "int64",
+          "description": "ID da Garagem referente ao ticket do estacionamento. Caso não utilizado o sistema tentará buscar o ticket pelo GUID ou em todas as garagens. Retorna erro se mais de um ticket for encontrado"
+        },
+        "idPromocao": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "idTransacao": {
+          "type": "string",
+          "description": "Identificação única para a transação"
+        },
+        "notas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "numeroTicket": {
+          "type": "string",
+          "description": "Número do código de barras do ticket do estacionamento"
+        },
+        "permitirValorExcedente": {
+          "type": "boolean",
+          "description": "Permitir pagamento com valor excedente.",
+          "example": false
+        },
+        "permitirValorParcial": {
+          "type": "boolean",
+          "description": "Permitir pagamento com valor parcial.",
+          "example": false
+        },
+        "tokenAutenticacao": {
+          "type": "string",
+          "description": "O token de autenticação para a promoção."
+        },
+        "udid": {
+          "type": "string",
+          "description": "Identificador único para o dispositivo"
+        },
+        "valor": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor do pagamento em centavos. Exemplo: para um pagamento de R$1,50 enviar 150"
+        }
+      }
+    },
+    "DadosCpf": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email."
+        },
+        "nome": {
+          "type": "string",
+          "description": "Nome."
+        }
+      }
+    },
+    "CriptografarCartaoRequest": {
+      "type": "object",
+      "properties": {
+        "numeroDoCartao": {
+          "type": "string"
+        },
+        "portador": {
+          "type": "string"
+        },
+        "udid": {
+          "type": "string"
+        },
+        "validade": {
+          "type": "string"
+        }
+      }
+    },
+    "TicketRequest": {
+      "type": "object",
+      "required": [
+        "numeroTicket",
+        "udid"
+      ],
+      "properties": {
+        "guidGaragem": {
+          "type": "string",
+          "description": "GUID da Garagem referente ao ticket do estacionamento. Caso não utilizado o sistema tentará buscar o ticket pelo ID ou em todas as garagens. Retorna erro se mais de um ticket for encontrado"
+        },
+        "idGaragem": {
+          "type": "integer",
+          "format": "int64",
+          "description": "ID da Garagem referente ao ticket do estacionamento. Caso não utilizado o sistema tentará buscar o ticket pelo GUID ou em todas as garagens. Retorna erro se mais de um ticket for encontrado"
+        },
+        "idPromocao": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "notas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "numeroTicket": {
+          "type": "string",
+          "description": "Número do código de barras do ticket do estacionamento"
+        },
+        "tiposPromocao": {
+          "type": "array",
+          "description": "Lista de tipos de promoção aceitos (SIMPLE = Qualquer promoção que precise somente do ID para ser utilizada)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tokenAutenticacao": {
+          "type": "string",
+          "description": "O token de autenticação para a promoção."
+        },
+        "udid": {
+          "type": "string",
+          "description": "Identificador único para o usuário"
+        }
+      }
+    },
+    "PagamentoEfetuado": {
+      "type": "object",
+      "required": [
+        "cnpjGaragem",
+        "data",
+        "estaticonamento",
+        "valorPago"
+      ],
+      "properties": {
+        "cnpjGaragem": {
+          "type": "string",
+          "description": "CNPJ da Garagem"
+        },
+        "codigoAutorizacao": {
+          "type": "string",
+          "description": "O Código de Autorização da nota fiscal."
+        },
+        "cpfCnpj": {
+          "type": "string",
+          "description": "CPF enviado para geração de RPS no pagamento"
+        },
+        "data": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Data do servidor na hora do pagamento(Unix Epoch em milissegundos)"
+        },
+        "estaticonamento": {
+          "type": "string",
+          "description": "Nome da Garagem associada ao ticket"
+        },
+        "linkLogoGaragem": {
+          "type": "string",
+          "description": "Link de uma imagem para o estacionamento"
+        },
+        "nfseCodigoVerificacao": {
+          "type": "string",
+          "description": "O código de verificação da nota fiscal."
+        },
+        "nfseNumero": {
+          "type": "string",
+          "description": "O número da nota fiscal."
+        },
+        "nfseQrCode": {
+          "type": "string",
+          "description": "O qrcode da nota fiscal. (Quando o nfseCodigoVerificacao estiver vazio este qrcode é da nota em contingência)"
+        },
+        "nsu": {
+          "type": "string",
+          "description": "O Número Sequencial Único da nota fiscal."
+        },
+        "permanencia": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Data de entrada(Unix Epoch em milissegundos)"
+        },
+        "permanenciaFim": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Uma previsão da data permitida para saída se o ticket for pago com o valor atual (Unix Epoch em milissegundos)"
+        },
+        "prepago": {
+          "type": "boolean",
+          "description": "Se o pagamento foi prepago"
+        },
+        "rps": {
+          "type": "string",
+          "description": "O número do RPS gerado"
+        },
+        "serieRps": {
+          "type": "string",
+          "description": "A série do RPS"
+        },
+        "ticket": {
+          "type": "string",
+          "description": "O número do ticket"
+        },
+        "tipo": {
+          "type": "string",
+          "description": "O tipo do serviço pago.",
+          "enum": [
+            "CARGA_CREDITO",
+            "CARTAO_DEBITO",
+            "TICKET"
+          ]
+        },
+        "valorPago": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Valor do pagamento"
+        },
+        "valorDesconto": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor do desconto aplicado na tarifa em centavos(R$1,50 = 150)"
+        }
+      }
+    },
+    "AutenticacaoResponse": {
+      "type": "object",
+      "properties": {
+        "idGaragem": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token": {
+          "type": "string"
+        }
+      }
+    },
+    "RetornoCreditarCartao": {
+      "type": "object",
+      "required": [
+        "errorCode",
+        "mensagem"
+      ],
+      "properties": {
+        "comprovante": {
+          "type": "string"
+        },
+        "errorCode": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Código de erro"
+        },
+        "mensagem": {
+          "type": "string",
+          "description": "Mensagem de erro"
+        },
+        "numeroCartao": {
+          "type": "string"
+        },
+        "pagamentoAceito": {
+          "type": "boolean"
+        },
+        "rps": {
+          "type": "string"
+        },
+        "serieRps": {
+          "type": "string"
+        }
+      }
+    },
+    "RetornoErro": {
+      "type": "object",
+      "required": [
+        "errorCode",
+        "mensagem"
+      ],
+      "properties": {
+        "errorCode": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Código de erro"
+        },
+        "mensagem": {
+          "type": "string",
+          "description": "Mensagem de erro"
+        }
+      }
+    },
+    "PagamentoCredenciadoRequest": {
+      "type": "object",
+      "required": [
+        "bandeira",
+        "cartaoDeCredito",
+        "chaveGaragem",
+        "codigoDeSeguranca",
+        "cpfCnpj",
+        "enderecoIp",
+        "hashSenha",
+        "idTransacao",
+        "matricula",
+        "portador",
+        "udid",
+        "validade",
+        "valor"
+      ],
+      "properties": {
+        "bandeira": {
+          "type": "string",
+          "description": "Bandeira do cartão de crédito utilizado no pagamento do ticket."
+        },
+        "cartaoCriptografado": {
+          "type": "string",
+          "description": "O Cartão criptografado."
+        },
+        "cartaoDeCredito": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Número do cartão de crédito a ser utilizado para pagamento."
+        },
+        "chaveGaragem": {
+          "type": "string",
+          "description": "A chave da garagem. Pode ser obtida pelo método consultarGaragens."
+        },
+        "codigoDeSeguranca": {
+          "type": "string",
+          "description": "Código de segurança do carão de crédito."
+        },
+        "cpfCnpj": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Número do documento do cliente para geração do RPS."
+        },
+        "dadosCnpj": {
+          "description": "Dados de pessoa jurídica.",
+          "$ref": "#/definitions/DadosCnpj"
+        },
+        "dadosCpf": {
+          "description": "Dados de pessoa física.",
+          "$ref": "#/definitions/DadosCpf"
+        },
+        "enderecoIp": {
+          "type": "string",
+          "description": "Endereço IP do dispositivo conectado ao serviço."
+        },
+        "hashSenha": {
+          "type": "string",
+          "description": "Senha ou hash da senha do usuário"
+        },
+        "idTransacao": {
+          "type": "string",
+          "description": "Um id único para a transação."
+        },
+        "matricula": {
+          "type": "integer",
+          "format": "int64",
+          "description": "O número do cartão de crédito WPS ou matricula."
+        },
+        "portador": {
+          "type": "string",
+          "description": "Nome do portador do cartão de crédito."
+        },
+        "udid": {
+          "type": "string",
+          "description": "Identificador único do dispositivo que acessa o serviço."
+        },
+        "validade": {
+          "type": "string",
+          "description": "Validade do cartão de crédito no formato MMYYYY."
+        },
+        "valor": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Número inteiro representando o valor a pagar multiplicado por 100."
+        }
+      }
+    },
+    "RetornoConsulta": {
+      "type": "object",
+      "required": [
+        "cnpjGaragem",
+        "dataConsulta",
+        "dataDeEntrada",
+        "dataPermitidaSaida",
+        "errorCode",
+        "garagem",
+        "idGaragem",
+        "imagemLink",
+        "mensagem",
+        "notas",
+        "numeroTicket",
+        "promocaoAtingida",
+        "promocoesDisponiveis",
+        "setor",
+        "tarifa",
+        "tarifaPaga",
+        "tarifaSemDesconto",
+        "ticketValido",
+        "valorDesconto"
+      ],
+      "properties": {
+        "cnpjGaragem": {
+          "type": "string",
+          "description": "CNPJ da Garagem"
+        },
+        "dataConsulta": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Data do servidor no momento da consulta(Unix Epoch em milissegundos)"
+        },
+        "dataDeEntrada": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Data de entrada(Unix Epoch em milissegundos)"
+        },
+        "dataPermitidaSaida": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Uma previsão da data permitida para saída se o ticket for pago com o valor atual (Unix Epoch em milissegundos)"
+        },
+        "dataPermitidaSaidaUltimoPagamento": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Se o ticket já possuir pagamento, esta é a data permitida para a saída calculada no mesmo"
+        },
+        "errorCode": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Código de erro"
+        },
+        "garagem": {
+          "type": "string",
+          "description": "Nome da Garagem associada ao ticket"
+        },
+        "idGaragem": {
+          "type": "integer",
+          "format": "int64",
+          "description": "ID da Garagem"
+        },
+        "idPromocao": {
+          "type": "integer",
+          "format": "int64",
+          "description": "O id da promoção(O mesmo do request)"
+        },
+        "imagemLink": {
+          "type": "string",
+          "description": "Link de uma imagem para o estacionamento"
+        },
+        "mensagem": {
+          "type": "string",
+          "description": "Mensagem de erro"
+        },
+        "notas": {
+          "type": "array",
+          "description": "Lista com as informações sobre as notas enviadas",
+          "items": {
+            "$ref": "#/definitions/NotaInfo"
+          }
+        },
+        "numeroTicket": {
+          "type": "string",
+          "description": "O número do ticket"
+        },
+        "promocaoAtingida": {
+          "type": "boolean",
+          "description": "Se a promoção existe e foi atingida",
+          "example": false
+        },
+        "promocoesDisponiveis": {
+          "type": "boolean",
+          "description": "Se existem promoções cadastradas para a garagem do ticket",
+          "example": false
+        },
+        "setor": {
+          "type": "string",
+          "description": "Setor do ticket"
+        },
+        "tarifa": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor TOTAL da tarifa do ticket em centavos(R$1,50 = 150). Este valor ignora o valor já pago, mas não ignora descontos. ATENÇÃO: Este valor é zero quando o ticket está na tolerância!"
+        },
+        "tarifaPaga": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor da tarifa já paga em centavos(R$1,50 = 150). Para calcular o valor a pagar utilize 'max(tarifa - tarifaPaga, 0)'"
+        },
+        "tarifaSemDesconto": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor TOTAL e sem desconto da tarifa do ticket em centavos(R$1,50 = 150)."
+        },
+        "ticketValido": {
+          "type": "boolean",
+          "description": "Se o ticket consultado é válido",
+          "example": false
+        },
+        "valorDesconto": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor do desconto aplicado na tarifa em centavos(R$1,50 = 150)"
+        }
+      }
+    },
+    "PagamentoRequest": {
+      "type": "object",
+      "required": [
+        "bandeira",
+        "enderecoIp",
+        "idTransacao",
+        "numeroTicket",
+        "udid",
+        "valor"
+      ],
+      "properties": {
+        "bandeira": {
+          "type": "string",
+          "description": "Bandeira do cartão de crédito"
+        },
+        "cartaoCriptografado": {
+          "type": "string",
+          "description": "O Cartão criptografado."
+        },
+        "cartaoDeCredito": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Número do cartão de crédito"
+        },
+        "codigoDeSeguranca": {
+          "type": "string",
+          "description": "Código de segurança do cartão de crédito"
+        },
+        "cpfCnpj": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Número do documento do cliente para geração do RPS"
+        },
+        "criptografarCartao": {
+          "type": "boolean",
+          "description": "Retornar o cartão criptografado se o pagamento for bem sucedido",
+          "example": false
+        },
+        "dadosCnpj": {
+          "description": "Dados de pessoa jurídica.",
+          "$ref": "#/definitions/DadosCnpj"
+        },
+        "dadosCpf": {
+          "description": "Dados de pessoa física.",
+          "$ref": "#/definitions/DadosCpf"
+        },
+        "enderecoIp": {
+          "type": "string",
+          "description": "Endereco IP do dispositivo"
+        },
+        "guidGaragem": {
+          "type": "string",
+          "description": "GUID da Garagem referente ao ticket do estacionamento. Caso não utilizado o sistema tentará buscar o ticket pelo ID ou em todas as garagens. Retorna erro se mais de um ticket for encontrado"
+        },
+        "idGaragem": {
+          "type": "integer",
+          "format": "int64",
+          "description": "ID da Garagem referente ao ticket do estacionamento. Caso não utilizado o sistema tentará buscar o ticket pelo GUID ou em todas as garagens. Retorna erro se mais de um ticket for encontrado"
+        },
+        "idPromocao": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "idTransacao": {
+          "type": "string",
+          "description": "Identificação única para a transação"
+        },
+        "notas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "numeroTicket": {
+          "type": "string",
+          "description": "Número do código de barras do ticket do estacionamento"
+        },
+        "permitirValorExcedente": {
+          "type": "boolean",
+          "description": "Permitir pagamento com valor excedente.",
+          "example": false
+        },
+        "portador": {
+          "type": "string",
+          "description": "Obrigatório apenas para Gateway Komerci"
+        },
+        "tokenAutenticacao": {
+          "type": "string",
+          "description": "O token de autenticação para a promoção."
+        },
+        "udid": {
+          "type": "string",
+          "description": "Identificador único para o dispositivo"
+        },
+        "validade": {
+          "type": "string",
+          "description": "Validade do cartão de crédito no formato 'MMYYYY'"
+        },
+        "valor": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Valor do pagamento em centavos. Exemplo: para um pagamento de R$1,50 enviar 150"
+        }
+      }
+    },
+    "RetornoPagamento": {
+      "type": "object",
+      "required": [
+        "comprovante",
+        "dataHoraSaida",
+        "dataPagamento",
+        "errorCode",
+        "mensagem",
+        "numeroTicket",
+        "rps",
+        "serieRps",
+        "ticketPago"
+      ],
+      "properties": {
+        "cartaoCriptografado": {
+          "type": "string",
+          "description": "O cartão criptografado se solicitado"
+        },
+        "comprovante": {
+          "type": "string",
+          "description": "Texto com o comprovante de pagamento do ticket"
+        },
+        "dataHoraSaida": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Data e hora permitida para a saída do estacionamento(Unix Epoch em milissegundos)"
+        },
+        "dataPagamento": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Data do servidor na hora do pagamento(Unix Epoch em milissegundos)"
+        },
+        "errorCode": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Código de erro"
+        },
+        "mensagem": {
+          "type": "string",
+          "description": "Mensagem de erro"
+        },
+        "numeroTicket": {
+          "type": "string",
+          "description": "O número do ticket"
+        },
+        "rps": {
+          "type": "string",
+          "description": "O número do RPS gerado"
+        },
+        "serieRps": {
+          "type": "string",
+          "description": "A série do RPS"
+        },
+        "ticketPago": {
+          "type": "boolean",
+          "description": "Se o ticket foi pago",
+          "example": false
+        }
+      }
+    },
+    "DadosCnpj": {
+      "type": "object",
+      "required": [
+        "dadosEndereco",
+        "razaoSocial"
+      ],
+      "properties": {
+        "dadosEndereco": {
+          "description": "Dados do endereço.",
+          "$ref": "#/definitions/DadosEndereco"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email."
+        },
+        "inscricaoEstadual": {
+          "type": "string",
+          "description": "Inscrição Estadual."
+        },
+        "inscricaoMunicipal": {
+          "type": "string",
+          "description": "Inscrição Municipal."
+        },
+        "razaoSocial": {
+          "type": "string",
+          "description": "Razão Social."
+        }
+      }
+    }
+  }
+}
